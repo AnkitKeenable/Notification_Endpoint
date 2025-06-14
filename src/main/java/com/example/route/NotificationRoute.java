@@ -1,6 +1,7 @@
 package com.example.route;
 
 import com.example.service.RequestCounterService;
+import com.example.service.RequestIdService;
 import com.example.util.LogMasker;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -11,8 +12,11 @@ import org.apache.camel.model.rest.RestBindingMode;
 @ApplicationScoped
 public class NotificationRoute extends RouteBuilder {
 
+//    @Inject
+//    RequestCounterService requestCounterService;
+
     @Inject
-    RequestCounterService requestCounterService;
+    RequestIdService requestIdService;
 
     @Override
     public void configure() throws Exception {
@@ -28,24 +32,13 @@ public class NotificationRoute extends RouteBuilder {
                 .produces("application/json")
                 .to("direct:processNotification");
 
-        // Processing route
-//        from("direct:processNotification")
-//                .routeId("notification-api-route")
-//                .log("Received request: ${body}")
-//                .bean("authMerger", "merge")
-//                .process(new LogMasker()) // Initialize the masker
-//                .marshal().json()
-//                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
-//                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-//                .toD("{{notification.api.url}}?bridgeEndpoint=true")
-//                .log("External API response: ${body}");
 
         from("direct:processNotification")
                 .routeId("notification-api-route")
                 .process(e -> {
-                    long id = requestCounterService.getNextId();
-                    e.setProperty("requestId", id);
-                    e.getIn().setHeader("X-Request-ID", id);
+                    String requestId = requestIdService.generateId();
+                    e.setProperty("requestId", requestId);
+                    e.getIn().setHeader("X-Request-ID", requestId);
                 })
                 .log("Request ID: ${exchangeProperty.requestId} - Received request: ${body}")
                 .bean("authMerger", "merge")
